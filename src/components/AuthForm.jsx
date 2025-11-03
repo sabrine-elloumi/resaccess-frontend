@@ -11,13 +11,14 @@ export default function AuthForm({ type }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" }); // efface l’erreur du champ modifié
+    setErrors({ ...errors, [e.target.name]: "" }); // efface l'erreur du champ modifié
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newErrors = {};
@@ -40,7 +41,54 @@ export default function AuthForm({ type }) {
 
     if (Object.keys(newErrors).length === 0) {
       console.log("✅ Formulaire envoyé :", formData);
-      // TODO: ajouter l'appel API ici
+      console.log("🔄 Début de l'appel API...");
+      
+      setIsLoading(true);
+
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            confirmPassword: formData.confirmPassword
+          })
+        });
+
+        console.log("📡 Réponse reçue, statut:", response.status);
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          console.log("🎉 Inscription réussie:", data);
+          alert("Inscription réussie ! Vous pouvez maintenant vous connecter.");
+          // Redirection ou reset du formulaire
+          setFormData({
+            name: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+          });
+        } else {
+          console.log("❌ Erreur du serveur:", data);
+          if (data.error === "Email already exists") {
+            setErrors({ email: "Cet email est déjà utilisé." });
+          } else if (data.error === "Passwords do not match") {
+            setErrors({ confirmPassword: "Les mots de passe ne correspondent pas." });
+          } else {
+            alert("Erreur lors de l'inscription: " + (data.error || "Erreur inconnue"));
+          }
+        }
+      } catch (error) {
+        console.error("💥 Erreur réseau:", error);
+        alert("Erreur de connexion au serveur. Vérifiez que le backend est démarré sur le port 5000.");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -55,6 +103,7 @@ export default function AuthForm({ type }) {
             value={formData.name}
             onChange={handleChange}
             className={errors.name ? "input-error" : ""}
+            disabled={isLoading}
           />
           {errors.name && <p className="error-text">{errors.name}</p>}
         </div>
@@ -68,6 +117,7 @@ export default function AuthForm({ type }) {
           value={formData.email}
           onChange={handleChange}
           className={errors.email ? "input-error" : ""}
+          disabled={isLoading}
         />
         {errors.email && <p className="error-text">{errors.email}</p>}
       </div>
@@ -80,6 +130,7 @@ export default function AuthForm({ type }) {
           value={formData.password}
           onChange={handleChange}
           className={errors.password ? "input-error" : ""}
+          disabled={isLoading}
         />
         {errors.password && <p className="error-text">{errors.password}</p>}
       </div>
@@ -93,6 +144,7 @@ export default function AuthForm({ type }) {
             value={formData.confirmPassword}
             onChange={handleChange}
             className={errors.confirmPassword ? "input-error" : ""}
+            disabled={isLoading}
           />
           {errors.confirmPassword && (
             <p className="error-text">{errors.confirmPassword}</p>
@@ -100,13 +152,17 @@ export default function AuthForm({ type }) {
         </div>
       )}
 
-      <button type="submit" className="auth-button">
-        {type === "login" ? "Se connecter" : "Créer mon compte"}
+      <button 
+        type="submit" 
+        className="auth-button"
+        disabled={isLoading}
+      >
+        {isLoading ? "Chargement..." : (type === "login" ? "Se connecter" : "Créer mon compte")}
       </button>
 
       {type === "login" ? (
         <p className="auth-switch">
-          Pas encore de compte ? <Link to="/signup">S’inscrire</Link>
+          Pas encore de compte ? <Link to="/signup">S'inscrire</Link>
         </p>
       ) : (
         <p className="auth-switch">
@@ -116,4 +172,3 @@ export default function AuthForm({ type }) {
     </form>
   );
 }
-
