@@ -38,11 +38,11 @@ export default function AuthForm({ type }) {
 
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length === 0) {
+   if (Object.keys(newErrors).length === 0) {
       console.log("✅ Formulaire envoyé :", formData);
-      // TODO: ajouter l'appel API ici
+      console.log("🔄 TEST - Cette ligne s'affiche-t-elle ?"); 
+      
     }
-  };
 
   return (
     <form className="auth-form" onSubmit={handleSubmit} noValidate>
