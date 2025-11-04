@@ -17,7 +17,7 @@ export default function AuthForm({ type }) {
     setErrors({ ...errors, [e.target.name]: "" }); // efface l’erreur du champ modifié
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newErrors = {};
@@ -40,7 +40,41 @@ export default function AuthForm({ type }) {
 
     if (Object.keys(newErrors).length === 0) {
       console.log("✅ Formulaire envoyé :", formData);
-      // TODO: ajouter l'appel API ici
+
+      try {
+        const url =
+          type === "login"
+            ? "http://localhost:5000/api/auth/login"
+            : "http://localhost:5000/api/auth/register";
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.message || "Erreur de connexion");
+          return;
+        }
+
+        console.log("✅ Succès :", data);
+        alert(
+          type === "login"
+            ? "Connexion réussie !"
+            : "Inscription réussie !"
+        );
+
+        // Exemple : sauvegarder le token et rediriger
+        // localStorage.setItem("token", data.token);
+        // navigate("/dashboard");
+
+      } catch (error) {
+        console.error("Erreur lors de l'appel API :", error);
+        alert("Erreur de serveur");
+      }
     }
   };
 
