@@ -11,13 +11,14 @@ export default function AuthForm({ type }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" }); // efface l’erreur du champ modifié
+    setErrors({ ...errors, [e.target.name]: "" });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newErrors = {};
@@ -40,7 +41,40 @@ export default function AuthForm({ type }) {
 
     if (Object.keys(newErrors).length === 0) {
       console.log("✅ Formulaire envoyé :", formData);
-      // TODO: ajouter l'appel API ici
+      setLoading(true);
+
+      try {
+        // APPEL API AU BACKEND
+        const endpoint = type === "signup" ? "register" : "login";
+        const response = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+        console.log("📡 Réponse du backend:", data);
+
+        if (response.ok) {
+          alert(data.message || "Opération réussie !");
+          // Réinitialiser le formulaire après succès
+          setFormData({
+            name: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+          });
+        } else {
+          alert("Erreur: " + (data.message || data.error));
+        }
+      } catch (error) {
+        console.error('❌ Erreur:', error);
+        alert('Erreur de connexion au serveur');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -55,6 +89,7 @@ export default function AuthForm({ type }) {
             value={formData.name}
             onChange={handleChange}
             className={errors.name ? "input-error" : ""}
+            disabled={loading}
           />
           {errors.name && <p className="error-text">{errors.name}</p>}
         </div>
@@ -68,6 +103,7 @@ export default function AuthForm({ type }) {
           value={formData.email}
           onChange={handleChange}
           className={errors.email ? "input-error" : ""}
+          disabled={loading}
         />
         {errors.email && <p className="error-text">{errors.email}</p>}
       </div>
@@ -80,6 +116,7 @@ export default function AuthForm({ type }) {
           value={formData.password}
           onChange={handleChange}
           className={errors.password ? "input-error" : ""}
+          disabled={loading}
         />
         {errors.password && <p className="error-text">{errors.password}</p>}
       </div>
@@ -93,6 +130,7 @@ export default function AuthForm({ type }) {
             value={formData.confirmPassword}
             onChange={handleChange}
             className={errors.confirmPassword ? "input-error" : ""}
+            disabled={loading}
           />
           {errors.confirmPassword && (
             <p className="error-text">{errors.confirmPassword}</p>
@@ -100,13 +138,17 @@ export default function AuthForm({ type }) {
         </div>
       )}
 
-      <button type="submit" className="auth-button">
-        {type === "login" ? "Se connecter" : "Créer mon compte"}
+      <button 
+        type="submit" 
+        className="auth-button"
+        disabled={loading}
+      >
+        {loading ? "Chargement..." : (type === "login" ? "Se connecter" : "Créer mon compte")}
       </button>
 
       {type === "login" ? (
         <p className="auth-switch">
-          Pas encore de compte ? <Link to="/signup">S’inscrire</Link>
+          Pas encore de compte ? <Link to="/signup">S'inscrire</Link>
         </p>
       ) : (
         <p className="auth-switch">
@@ -116,4 +158,3 @@ export default function AuthForm({ type }) {
     </form>
   );
 }
-
