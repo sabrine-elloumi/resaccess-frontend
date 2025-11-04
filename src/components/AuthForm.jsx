@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/AuthForm.css";
 
 export default function AuthForm({ type }) {
@@ -11,18 +11,21 @@ export default function AuthForm({ type }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState(""); // Pour afficher les erreurs du serveur
+  const navigate = useNavigate(); // Pour rediriger après succès
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" }); // efface l’erreur du champ modifié
+    setErrors({ ...errors, [e.target.name]: "" });
+    setServerError(""); // Efface l'erreur serveur
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newErrors = {};
 
-    // Validation basique
+    // Validation côté client
     if (type === "signup" && !formData.name.trim()) {
       newErrors.name = "Veuillez entrer votre nom complet.";
     }
@@ -38,14 +41,64 @@ export default function AuthForm({ type }) {
 
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length === 0) {
-      console.log("✅ Formulaire envoyé :", formData);
-      // TODO: ajouter l'appel API ici
+    if (Object.keys(newErrors).length > 0) return;
+
+    try {
+      const url = type === "login" 
+        ? "http://localhost:5000/api/auth/login"
+        .trim() 
+        : "http://localhost:5000/api/auth/register";
+
+      const body = type === "login"
+        ? { email: formData.email, password: formData.password }
+        : { 
+            name: formData.name, 
+            email: formData.email, 
+            password: formData.password, 
+            confirmPassword: formData.confirmPassword 
+          };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Erreur du serveur (ex: champs requis, mot de passe invalide, etc.)
+        setServerError(data.message || "Une erreur est survenue");
+        return;
+      }
+
+      // Succès : connexion ou inscription
+      console.log("Succès :", data);
+
+      // Optionnel : sauvegarder le token
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify({
+        id: data._id,
+        name: data.name,
+        email: data.email,
+        alias: data.alias
+      }));
+
+      // Rediriger après succès
+      navigate("/dashboard"); // Change selon ta route
+
+    } catch (err) {
+      console.error("Erreur réseau :", err);
+      setServerError("Impossible de se connecter au serveur.");
     }
   };
 
   return (
     <form className="auth-form" onSubmit={handleSubmit} noValidate>
+      {serverError && <p className="error-text server-error">{serverError}</p>}
+
       {type === "signup" && (
         <div className="form-group">
           <input
@@ -116,4 +169,3 @@ export default function AuthForm({ type }) {
     </form>
   );
 }
-
